@@ -98,7 +98,7 @@ with sync_playwright() as p:
     live.keyboard.press('Escape')
     live.locator('[data-page="overview"]').click()
     live.locator('#period').select_option('7')
-    live.wait_for_function("document.getElementById('refresh').disabled === false")
+    expect(live.locator('#refresh')).to_be_enabled()
     assert any('days=7' in url for url in requested)
     live.route('**/api/analytics?*',lambda route:route.fulfill(status=502,json={'error':'Google erişimi reddetti.'}))
     live.locator('#refresh').click()
