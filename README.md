@@ -13,6 +13,18 @@ python3 server.py
 
 Varsayılan geliştirme adresi `127.0.0.1:3000`. `HOST` ve `PORT` isteğe bağlıdır. Bu sunucu kişisel yerel geliştirme içindir. İnternete yayın için HTTPS, özel kullanıcı erişimi, dağıtım ve kalıcı token kasası ayrıca yapılandırılmalıdır; geliştirme sunucusunu tek başına herkese açmayın.
 
+## Windows’ta kişisel kullanım
+
+GitHub → Code → Download ZIP, ardından Tümünü Ayıkla. `run_local.py` bulunan klasörü açın. Dosya Gezgini adres çubuğuna `cmd` yazıp Enter’a basın. Açılan pencerede:
+
+```bat
+py -3 run_local.py
+```
+
+Başlatıcı OAuth bilgilerini terminalde sorar; Client secret yazılırken görünmez. Bilgiler dosyaya kaydedilmez. Tarayıcıda `http://localhost:3000` adresini açın. Google’daki yetkili yönlendirme adresi `http://localhost:3000/auth/callback` olmalıdır.
+
+`BASLAT.bat` isteğe bağlı bir kolaylık dosyasıdır. Windows Akıllı Uygulama Denetimi imzasız/indirilen dosyayı engellerse korumayı kapatmayın. Python’u resmi kaynaktan kurun ve yukarıdaki komutu kullanın. Python’un kendisi de engelleniyorsa uyarıdaki dosya adını kontrol edin; korumayı devre dışı bırakmayın.
+
 ## Gerçek YouTube bağlantısı
 
 OAuth ve YouTube Analytics raporlarını okuma altyapısı uygulanmıştır. **Gerçek Google yetkilendirmesi henüz doğrulanmadı:** OAuth istemcisi bu ortamda mevcut değil. Ana ekrandaki demo etiketli değerler ve videolar tamamen kurgusaldır.
