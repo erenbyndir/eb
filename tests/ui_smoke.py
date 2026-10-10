@@ -80,11 +80,15 @@ with sync_playwright() as p:
     requested=[]
     def report(route):
         requested.append(route.request.url)
-        route.fulfill(json={'start':'2026-09-12','end':'2026-10-09','summary':{'views':123,'hours':2,'subscribers':-2,'avgSeconds':60},'videos':[{'id':'abcdefghijk','title':'Mock live video','published':'2026-10-08','views':123,'hours':2,'subscribers':-2,'avgSeconds':60,'impressions':None,'ctr':None,'reportStatus':'available'},{'id':'newvideo001','title':'Yesterday upload','published':'2026-10-09','views':None,'hours':None,'subscribers':None,'avgSeconds':None,'impressions':None,'ctr':None,'reportStatus':'not_reported','lifetimeViews':12,'duration':'0:45'}],'daily':[{'date':'2026-10-09','views':123}]})
+        route.fulfill(json={'start':'2026-09-12','end':'2026-10-09','summary':{'views':123,'hours':2,'subscribers':-2,'avgSeconds':60},'summaryAvailable':True,'latestDailyDate':'2026-10-07','channelTotals':{'views':1000,'subscribers':8,'videos':2},'videos':[{'id':'abcdefghijk','title':'Mock live video','published':'2026-10-08','views':123,'hours':2,'subscribers':-2,'avgSeconds':60,'impressions':None,'ctr':None,'reportStatus':'available'},{'id':'newvideo001','title':'Yesterday upload','published':'2026-10-09','views':None,'hours':None,'subscribers':None,'avgSeconds':None,'impressions':None,'ctr':None,'reportStatus':'not_reported','lifetimeViews':12,'duration':'0:45'}],'daily':[{'date':'2026-10-09','views':123}]})
     live.route('**/api/analytics?*',report)
     live.goto(BASE,wait_until='networkidle')
     expect(live.locator('#data-notice')).to_contain_text('YouTube Analytics bağlı')
     expect(live.locator('#views')).to_have_text('123')
+    expect(live.locator('#total-views')).to_have_text('1.000')
+    expect(live.locator('#total-subscribers')).to_have_text('8')
+    expect(live.locator('#total-videos')).to_have_text('2')
+    expect(live.locator('#report-availability')).to_contain_text('7.10.2026')
     expect(live.locator('#subscribers')).to_have_text('-2')
     expect(live.locator('[data-format="short"]')).to_be_disabled()
     live.locator('[data-page="videos"]').click()

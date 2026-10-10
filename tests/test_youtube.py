@@ -18,7 +18,7 @@ class ReportsTest(unittest.TestCase):
         self.assertEqual(result['daily'][0]['views'],800)
 
     def test_no_activity_is_a_valid_empty_report(self):
-        with patch.object(youtube,'upload_ids',return_value=([],False)),patch.object(youtube,'query_report',return_value=[]):
+        with patch.object(youtube,'channel_totals',return_value={'views':0,'subscribers':0,'videos':0}),patch.object(youtube,'upload_ids',return_value=([],False)),patch.object(youtube,'query_report',return_value=[]):
             result=youtube.fetch_analytics('dummy',7)
         self.assertEqual(result['summary']['views'],0)
         self.assertIsNone(result['summary']['avgSeconds'])
@@ -29,7 +29,7 @@ class ReportsTest(unittest.TestCase):
         metadata={'items':[
             {'id':'oldvideo001','snippet':{'title':'Old video','publishedAt':'2026-10-05T12:00:00Z'}},
             {'id':'newvideo001','snippet':{'title':'Yesterday upload','publishedAt':'2026-10-09T12:00:00Z'},'contentDetails':{'duration':'PT45S'},'statistics':{'viewCount':'12'}}]}
-        with patch.object(youtube,'upload_ids',return_value=(['newvideo001','oldvideo001'],False)),patch.object(youtube,'query_report',side_effect=[[total],[],[{'video':'oldvideo001',**total}]]),patch.object(youtube,'request_json',return_value=metadata):
+        with patch.object(youtube,'channel_totals',return_value={'views':1500,'subscribers':6,'videos':2}),patch.object(youtube,'upload_ids',return_value=(['newvideo001','oldvideo001'],False)),patch.object(youtube,'query_report',side_effect=[[total],[{'day':'2026-10-07','views':923}],[{'video':'oldvideo001',**total}]]),patch.object(youtube,'request_json',return_value=metadata):
             result=youtube.fetch_analytics('dummy',28)
         self.assertEqual(len(result['videos']),2)
         new=result['videos'][0]
@@ -41,6 +41,30 @@ class ReportsTest(unittest.TestCase):
         self.assertIsNone(new['subscribers'])
         self.assertEqual(new['reportStatus'],'not_reported')
         self.assertEqual(result['summary']['views'],923)
+        self.assertEqual(result['channelTotals']['views'],1500)
+        self.assertEqual(result['latestDailyDate'],'2026-10-07')
+        self.assertTrue(result['summaryAvailable'])
+
+    def test_channel_totals_preserve_zero_and_hidden_subscriber_count(self):
+        with patch.object(youtube,'request_json',return_value={'items':[{'statistics':{'viewCount':'0','videoCount':'2','subscriberCount':'9','hiddenSubscriberCount':True}}]}):
+            self.assertEqual(youtube.channel_totals('dummy'),{'views':0,'videos':2,'subscribers':None})
+
+    def test_uploads_without_period_report_have_unknown_period_summary(self):
+        with patch.object(youtube,'upload_ids',return_value=(['newvideo001'],False)),patch.object(youtube,'channel_totals',return_value={'views':12,'subscribers':1,'videos':1}),patch.object(youtube,'query_report',return_value=[]),patch.object(youtube,'request_json',return_value={'items':[{'id':'newvideo001','snippet':{'title':'New video'}}]}):
+            result=youtube.fetch_analytics('dummy',28)
+        self.assertIsNone(result['summary']['views'])
+        self.assertIsNone(result['summary']['hours'])
+        self.assertFalse(result['summaryAvailable'])
+        self.assertIsNone(result['latestDailyDate'])
+        self.assertEqual(result['channelTotals']['views'],12)
+
+    def test_channel_totals_failure_does_not_hide_period_report(self):
+        total={'views':7,'estimatedMinutesWatched':3}
+        with patch.object(youtube,'upload_ids',return_value=([],False)),patch.object(youtube,'channel_totals',side_effect=youtube.YouTubeError('Servise erişilemedi')),patch.object(youtube,'query_report',side_effect=[[total],[],[]]):
+            result=youtube.fetch_analytics('dummy',28)
+        self.assertEqual(result['summary']['views'],7)
+        self.assertIsNone(result['channelTotals']['views'])
+        self.assertEqual(result['channelTotalsError'],'Servise erişilemedi')
 
     def test_upload_list_reads_next_page_and_deduplicates(self):
         replies=[{'items':[{'contentDetails':{'relatedPlaylists':{'uploads':'UPLOADS'}}}]},

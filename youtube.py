@@ -138,6 +138,17 @@ def video_duration(value):
     total = hours*3600+minutes*60+seconds
     return f'{total//3600}:{total%3600//60:02d}:{total%60:02d}' if total>=3600 else f'{total//60}:{total%60:02d}'
 
+def channel_totals(token):
+    url='https://www.googleapis.com/youtube/v3/channels?' + urllib.parse.urlencode({'part':'statistics','mine':'true'})
+    items=request_json(url,token=token).get('items',[])
+    stats=items[0].get('statistics',{}) if items else {}
+    def count(key):
+        value=stats.get(key)
+        return int(value) if value is not None else None
+    return {'views':count('viewCount'),
+            'subscribers':None if stats.get('hiddenSubscriberCount') else count('subscriberCount'),
+            'videos':count('videoCount')}
+
 def fetch_analytics(token, days):
     start, end = date_range(days)
     metrics = 'views,estimatedMinutesWatched,subscribersGained,subscribersLost,averageViewDuration'
@@ -169,6 +180,17 @@ def fetch_analytics(token, days):
                        'duration':video_duration(item.get('contentDetails',{}).get('duration')),
                        'lifetimeViews':int(lifetime) if lifetime is not None else None,
                        'reportStatus':'available' if row is not None else 'not_reported', **value})
-    return {'start':start,'end':end,'summary':summary(total[0] if total else {}),
+    totals_error=None
+    try:
+        totals=channel_totals(token)
+    except YouTubeError as error:
+        totals={'views':None,'subscribers':None,'videos':None}
+        totals_error=str(error)
+    period_summary=summary(total[0] if total else {})
+    if not total and videos:
+        period_summary={'views':None,'hours':None,'subscribers':None,'avgSeconds':None}
+    return {'start':start,'end':end,'summary':period_summary,
+            'summaryAvailable':bool(total), 'channelTotals':totals, 'channelTotalsError':totals_error,
+            'latestDailyDate':max((row['day'] for row in daily),default=None),
             'daily':[{'date':row['day'],'views':row['views']} for row in daily], 'videos':videos,
             'libraryTruncated':truncated, 'libraryLimit':1000, 'reportVideoLimit':50}

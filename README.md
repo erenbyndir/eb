@@ -63,13 +63,14 @@ Gerekli sunucu ağ hedefleri: `oauth2.googleapis.com`, `www.googleapis.com`, `yo
 ## Hangi veriler okunuyor?
 
 - Son 7, 28 veya 90 gün için kanal görüntüleme, izlenme saati, net abone ve ortalama izlenme süresi.
-- Günlük görüntüleme serisi.
+- Günlük görüntüleme serisi ve Google’ın son günlük veri tarihi.
+- Ana ekranda Data API’nin kanal görüntüleme, abone ve video toplamları **tüm zamanlar** olarak ayrı gösterilir. Dönem ölçümleriyle toplanmaz; YouTube bu toplamları da gecikmeli güncelleyebilir.
 - Kanalın yükleme oynatma listesinden **en yeni 1.000 video**, başlıkları, kapakları ve süreleri (sayfalar takip edilir).
 - Seçili dönemde en çok izlenen **ilk 50 video** için Analytics ölçümleri. Bu listenin dışındaki/henüz raporlanmayan videolar da kütüphanede görünür; dönem ölçümleri “—” olur. Video detayında Data API’nin tüm zamanlar görüntüleme sayısı ayrı etiketlenir.
 - Kütüphane sınırına ulaşılırsa açıkça bildirilir; yükleme listesinin dışındaki raporlanan videolar da eklenir.
 - Panel açık ve görünürken 15 dakikada bir yenileme; ayrıca manuel yenileme. Arka planda zamanlanmış görev yoktur.
 
-Kanal toplamları video listesinden hesaplanmaz; ayrı kanal raporundan alınır. Yeni yüklemeler YouTube Data API’den listelenir; Analytics raporu gecikmesi videoyu kütüphaneden gizlemez. Dönem raporu olmayan videoda sıfır izlenme varsayılmaz. API verileri gecikmeli gelebilir. Güncel günün eksik verisi yerine raporlama zaman diliminde (YouTube/Pasifik) önceki gün kullanılır. Raporlar 15 dakika önbellekte tutulur; manuel yenilemede 30 saniye kota koruması vardır.
+Kanal toplamları video listesinden hesaplanmaz; ayrı kanal raporundan alınır. Yeni yüklemeler YouTube Data API’den listelenir; Analytics raporu gecikmesi videoyu kütüphaneden gizlemez. Dönem raporu olmayan videoda sıfır izlenme varsayılmaz. Kanalda yükleme varken hiç dönem özeti dönmezse özet de “—” gösterilir. Kanal toplamı alınamazsa Analytics ekranı çalışmaya devam eder. API verileri gecikmeli gelebilir. Güncel günün eksik verisi yerine raporlama zaman diliminde (YouTube/Pasifik) önceki gün kullanılır. Raporlar 15 dakika önbellekte tutulur; manuel yenilemede 30 saniye kota koruması vardır.
 
 Bu sürüm canlı raporda Shorts ayrımı, gösterim/tıklama oranı, retansiyon grafiği veya trafik kaynaklarını getirmez. Eksik veri uydurulmaz. Format filtresi canlı/CSV raporlarda bu yüzden devre dışıdır. Önceki dönem değişimleri yalnızca demo ekranında açıkça örnek olarak gösterilir. Koç önerileri yerel açık kurallardan üretilir; bir LLM servisine bağlı değildir, başarı tahmini/garantisi değildir. Aynı konudaki toplam izlenmeler, yayın tarihi/format farklarını tek başına açıklamaz.
 
