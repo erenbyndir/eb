@@ -2,3 +2,5 @@
 .csv-chart{padding:12px 0 22px}.csv-bar-row{display:grid;grid-template-columns:minmax(80px,1fr) 1.4fr 45px;align-items:center;gap:14px;font-size:12px;margin:16px 0}.csv-bar-row>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#8f95a3}.csv-bar-row b{text-align:right;color:#7c8294;font-size:11px;font-weight:500}.csv-bar-track{height:11px;background:#f4f1fa;border-radius:3px;overflow:hidden}.csv-bar{height:100%;background:#b39ddb;border-radius:3px}
 
 .connect-detail details{margin:12px 0}.connect-detail summary{cursor:pointer;font-weight:600}.connect-detail p{margin:0;font-size:12px;color:#88779d}
+
+.callback-box{display:grid;gap:10px;margin-top:14px;border-top:1px solid #e1daee;padding-top:14px}.callback-box small{font-size:11px}.callback-box code{user-select:all;line-height:1.7}.callback-box button{justify-self:start}

@@ -24,6 +24,19 @@ class ReportsTest(unittest.TestCase):
         self.assertIsNone(result['summary']['avgSeconds'])
         self.assertEqual(result['videos'],[])
 
+    def test_hosted_redirect_uses_render_url_with_explicit_override(self):
+        config={'YOUTUBE_CLIENT_ID':'dummy','YOUTUBE_CLIENT_SECRET':'dummy','YOUTUBE_REDIRECT_URI':'','RENDER_EXTERNAL_URL':'https://example.onrender.com/'}
+        with patch.dict(os.environ,config):
+            self.assertEqual(youtube.redirect_uri(),'https://example.onrender.com/auth/callback')
+            self.assertTrue(youtube.configuration()['configured'])
+        config['YOUTUBE_REDIRECT_URI']='https://custom.example.com/auth/callback'
+        with patch.dict(os.environ,config):
+            self.assertEqual(youtube.redirect_uri(),config['YOUTUBE_REDIRECT_URI'])
+        config['YOUTUBE_REDIRECT_URI']=''
+        config['RENDER_EXTERNAL_URL']='http://unsafe.example.com'
+        with patch.dict(os.environ,config):
+            self.assertFalse(youtube.configuration()['configured'])
+
     def test_redirect_uri_must_be_https_or_local_callback(self):
         config={'YOUTUBE_CLIENT_ID':'dummy','YOUTUBE_CLIENT_SECRET':'dummy','YOUTUBE_REDIRECT_URI':'http://example.com/auth/callback'}
         with patch.dict(os.environ,config):self.assertFalse(youtube.configuration()['configured'])

@@ -2,6 +2,22 @@
 
 Türkçe, mobil uyumlu kanal analiz çalışma alanı. Genel bakış, günlük izlenme grafiği, aranabilir/sıralanabilir video kütüphanesi, video detayları, kurala dayalı içerik koçu ve tarayıcıda saklanan içerik planı içerir.
 
+## Tarayıcıdan kullanım — Render
+
+[Render üzerinde kur](https://render.com/deploy?repo=https://github.com/erenbyndir/eb)
+
+Bu bağlantı bir **kurulum ekranıdır**, çalışan uygulama adresi değildir. Render hesabı ve GitHub deposuna erişim gerekir. `render.yaml` hazırdır; Python kurulumu veya dosya indirme gerekmez.
+
+1. Bağlantıyı açın ve GitHub hesabınızla giriş yapın. Render GitHub erişimi isterse `erenbyndir/eb` deposuna izin verin.
+2. İstenen `YOUTUBE_CLIENT_ID` ve `YOUTUBE_CLIENT_SECRET` alanlarına oluşturduğunuz Google OAuth istemcisinin bilgilerini girin. Client secret yalnızca Render’ın güvenli ayarına girilmelidir, sohbete veya GitHub’a yazılmamalıdır.
+3. Blueprint’i **Deploy / Apply** ile başlatın. Bu sağlayıcı işlemidir; bu sohbet tarafından başlatılmış veya doğrulanmış değildir.
+4. Render uygulamanız için gerçek bir HTTPS adresi verir. Panelde **Bağlantı ve ayarlar** ekranındaki geri dönüş adresini kopyalayın. Google Auth Platform → Clients → istemciniz → Authorized redirect URIs alanına ekleyip Save yapın.
+5. Panelde **YouTube’u bağla** ile kanalınızın hesabına okuma izni verin.
+
+HTTPS adresi Render’ın `RENDER_EXTERNAL_URL` değişkeninden belirlenir; `YOUTUBE_REDIRECT_URI` girmeniz gerekmez. Bir özel alan adı kullanırsanız bu değişkeni açıkça tanımlayın. Varsayılan `free` plan seçilidir; sağlayıcının güncel uygunluk/limit ve fiyat bilgileri kendi ekranında geçerlidir. Ücretsiz servis uyursa veya yeniden başlarsa Google’a yeniden bağlanmanız gerekir: tokenlar diske kaydedilmez. Yalnızca kişisel kullanım için tek sunucu örneğiyle çalıştırın. Otomatik GitHub deploy kapalıdır; test edilen değişiklikleri Render’dan elle deploy edebilirsiniz.
+
+Blueprint ve barındırılan adres tespiti yerel testlerle doğrulanmıştır; gerçek Render deploy’u ve gerçek Google yetkilendirmesi kullanıcı hesabı/ayarları olmadan doğrulanmamıştır.
+
 ## Başlatma
 
 Python 3.9+ ve testler için Node.js 18+ yeterli. Uygulamanın harici paket bağımlılığı yoktur.
@@ -11,7 +27,7 @@ cd /workspace/eb
 python3 server.py
 ```
 
-Varsayılan geliştirme adresi `127.0.0.1:3000`. `HOST` ve `PORT` isteğe bağlıdır. Bu sunucu kişisel yerel geliştirme içindir. İnternete yayın için HTTPS, özel kullanıcı erişimi, dağıtım ve kalıcı token kasası ayrıca yapılandırılmalıdır; geliştirme sunucusunu tek başına herkese açmayın.
+Varsayılan geliştirme adresi `127.0.0.1:3000`. `HOST` ve `PORT` isteğe bağlıdır. Yerelde yalnızca loopback üzerinden açılır. Render yapılandırması servis portunu açar ve sağlayıcı HTTPS sağlar. Arayüzün demo bölümü herkese açıktır; kanal verileri HttpOnly oturum cookie’sine ve @erenbyndir hesabının Google okuma iznine bağlıdır. Tokenlar yalnızca bellektedir; çok sunuculu kullanım ve kalıcı arka plan raporlaması için ayrıca paylaşılan güvenli oturum/token saklama gerekir.
 
 ## Windows’ta kişisel kullanım
 
@@ -33,7 +49,7 @@ OAuth ve YouTube Analytics raporlarını okuma altyapısı uygulanmıştır. **G
 2. **YouTube Data API v3** ve **YouTube Analytics API** servislerini etkinleştirin.
 3. Google Auth Platform bölümünde uygulama bilgilerini ve hedef kitleyi ayarlayın. Testing modunda, @erenbyndir kanalının sahibi olan Google hesabını test kullanıcısı olarak ekleyin.
 4. **Web application** türünde bir OAuth client oluşturun.
-5. **Authorized redirect URIs** alanına bu uygulamanın erişilebilir adresi + `/auth/callback` ekleyin. Yerel geliştirme örneği `http://localhost:3000/auth/callback`; tarayıcı da `localhost` üzerinden uygulamayı açmalıdır. Bulut ortamındaki `localhost`, kullanıcının bilgisayarından erişilemez; bulut kullanımında uygulamaya ait gerçek HTTPS adresi gerekir. Bu adresin dağıtımı henüz yapılmamıştır.
+5. **Authorized redirect URIs** alanına bu uygulamanın erişilebilir adresi + `/auth/callback` ekleyin. Yerel geliştirme örneği `http://localhost:3000/auth/callback`; tarayıcı da `localhost` üzerinden uygulamayı açmalıdır. Bulut ortamındaki `localhost`, kullanıcının bilgisayarından erişilemez; bulut kullanımında uygulamaya ait gerçek HTTPS adresi gerekir. Render kurulum adımlarını üstte bulabilirsiniz.
 6. Ortam ayarlarında aşağıdaki değişkenleri ayarlayın; sırları sohbet veya Git deposuna koymayın:
    - `YOUTUBE_CLIENT_ID`: oluşturulan OAuth istemcisinin ID’si.
    - `YOUTUBE_CLIENT_SECRET`: OAuth istemcisinin sırrı; güvenli ortam/secret ayarları üzerinden sağlanmalıdır.

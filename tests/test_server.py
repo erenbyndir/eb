@@ -66,6 +66,15 @@ class ServerTest(unittest.TestCase):
             request.add_header('X-Creator-Request','1')
             with self.opener.open(request) as response:self.assertTrue(json.load(response)['disconnected'])
             self.assertFalse(json.load(self.get('/api/status'))['connected'])
+    def test_hosted_https_callback_sets_secure_cookie_and_health(self):
+        config={'YOUTUBE_CLIENT_ID':'test-id','YOUTUBE_CLIENT_SECRET':'test-secret','YOUTUBE_REDIRECT_URI':'','RENDER_EXTERNAL_URL':'https://example.onrender.com'}
+        with patch.dict(os.environ,config):
+            response=self.get('/auth/start')
+            self.assertIn('; Secure',response.headers['Set-Cookie'])
+            params=urllib.parse.parse_qs(urllib.parse.urlsplit(response.headers['Location']).query)
+            self.assertEqual(params['redirect_uri'],['https://example.onrender.com/auth/callback'])
+        self.assertEqual(json.load(self.get('/health')),{'ok':True})
+
     def test_wrong_oauth_state_does_not_exchange_code(self):
         config={'YOUTUBE_CLIENT_ID':'x','YOUTUBE_CLIENT_SECRET':'x','YOUTUBE_REDIRECT_URI':self.base+'/auth/callback'}
         with patch.dict(os.environ,config):

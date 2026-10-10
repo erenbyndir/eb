@@ -1,4 +1,4 @@
-"""Single-user local development server with read-only YouTube OAuth."""
+"""Personal Creator Studio server; HTTPS is terminated by the hosting proxy."""
 import base64
 import hashlib
 import json
@@ -53,6 +53,8 @@ class Handler(SimpleHTTPRequestHandler):
                 if now-SESSIONS[key]['created']>SESSION_AGE:del SESSIONS[key]
             value=SESSIONS.get(sid)
             if value is None and create:
+                if len(SESSIONS)>=256:
+                    return '',None
                 sid=secrets.token_urlsafe(32)
                 value={'created':now,'cache':{},'lock':threading.RLock()}
                 SESSIONS[sid]=value
@@ -66,7 +68,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def cookie(self,sid):
-        secure=urllib.parse.urlsplit(os.environ.get('YOUTUBE_REDIRECT_URI','')).scheme=='https'
+        secure=urllib.parse.urlsplit(youtube.redirect_uri()).scheme=='https'
         return f'creator_session={sid}; HttpOnly; SameSite=Lax; Path=/; Max-Age={SESSION_AGE}'+('; Secure' if secure else '')
 
     def access_token(self,session):
@@ -82,6 +84,8 @@ class Handler(SimpleHTTPRequestHandler):
         parsed=urllib.parse.urlsplit(self.path)
         path=parsed.path
         query=urllib.parse.parse_qs(parsed.query)
+        if path=='/health':
+            return self.json({'ok':True})
         if path=='/api/status':
             _,session=self.session()
             config=youtube.configuration()
@@ -90,12 +94,14 @@ class Handler(SimpleHTTPRequestHandler):
             if not youtube.configuration()['configured']:
                 return self.json({'error':'Google OAuth ayarları eksik. Bağlantı ayarlarını tamamla.'},503)
             sid,session=self.session(create=True)
+            if session is None:
+                return self.json({'error':'Bağlantı servisi şu an yoğun. Biraz sonra tekrar dene.'},503)
             state=secrets.token_urlsafe(32)
             verifier=secrets.token_urlsafe(48)
             challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')
             with session['lock']:
                 session.update({'oauth_state':state,'verifier':verifier,'oauth_started':time.time()})
-            params={'client_id':os.environ['YOUTUBE_CLIENT_ID'],'redirect_uri':os.environ['YOUTUBE_REDIRECT_URI'],
+            params={'client_id':os.environ['YOUTUBE_CLIENT_ID'],'redirect_uri':youtube.redirect_uri(),
                 'response_type':'code','scope':youtube.SCOPES,'state':state,'code_challenge':challenge,'code_challenge_method':'S256',
                 'access_type':'offline','prompt':'consent select_account'}
             return self.redirect('https://accounts.google.com/o/oauth2/v2/auth?'+urllib.parse.urlencode(params),self.cookie(sid))

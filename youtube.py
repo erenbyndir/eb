@@ -11,15 +11,25 @@ SCOPES = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapi
 class YouTubeError(Exception):
     pass
 
+def redirect_uri():
+    explicit = os.environ.get('YOUTUBE_REDIRECT_URI', '').strip()
+    if explicit:
+        return explicit
+    # Render injects this server-side; never infer an OAuth URI from a Host header.
+    external = os.environ.get('RENDER_EXTERNAL_URL', '').strip().rstrip('/')
+    return external + '/auth/callback' if external else ''
+
 def configuration():
-    names = ['YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET', 'YOUTUBE_REDIRECT_URI']
+    names = ['YOUTUBE_CLIENT_ID', 'YOUTUBE_CLIENT_SECRET']
     missing = [name for name in names if not os.environ.get(name)]
-    uri = os.environ.get('YOUTUBE_REDIRECT_URI', '')
+    uri = redirect_uri()
+    if not uri:
+        missing.append('YOUTUBE_REDIRECT_URI')
     parsed = urllib.parse.urlsplit(uri)
     valid_uri = parsed.scheme == 'https' or (parsed.scheme == 'http' and parsed.hostname in ('localhost', '127.0.0.1'))
     if uri and (not valid_uri or parsed.path != '/auth/callback' or parsed.query or parsed.fragment):
         missing.append('YOUTUBE_REDIRECT_URI (geçerli /auth/callback adresi)')
-    return {'configured': not missing, 'missing': missing}
+    return {'configured': not missing, 'missing': missing, 'redirect_uri': uri}
 
 def request_json(url, *, token=None, form=None):
     headers = {'Accept': 'application/json'}
@@ -50,7 +60,7 @@ def exchange_code(code, verifier):
     return request_json('https://oauth2.googleapis.com/token', form={
         'client_id': os.environ['YOUTUBE_CLIENT_ID'],
         'client_secret': os.environ['YOUTUBE_CLIENT_SECRET'],
-        'redirect_uri': os.environ['YOUTUBE_REDIRECT_URI'],
+        'redirect_uri': redirect_uri(),
         'code': code, 'code_verifier': verifier, 'grant_type': 'authorization_code',
     })
 
