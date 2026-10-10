@@ -1,0 +1,13 @@
+WINDOWS KURULUMU
+
+1. ZIP dosyasini "Tumunu Ayikla" ile acin.
+2. Python 3.9 veya daha yeni surumu kurun: https://www.python.org/downloads/windows/
+3. Google Cloud > Google Auth Platform > Clients > istemciniz:
+   Authorized redirect URIs alanina http://localhost:3000/auth/callback ekleyip Save yapin.
+4. BASLAT.bat dosyasina cift tiklayin.
+5. Client ID ve Client secret bilgilerini acilan pencereye girin.
+   Secret yazilirken gorunmez; normaldir. Bu bilgileri sohbete gondermeyin.
+6. Pencere acik kalsin. Tarayicida http://localhost:3000 adresini acin.
+7. YouTube'u bagla dugmesine basin ve kanalinizin Google hesabini secin.
+
+NOT: Ana ekrandaki demo verileri gercek kanal istatistikleri degildir.
