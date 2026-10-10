@@ -1,6 +1,7 @@
 """Read-only Google OAuth and YouTube reports. Credentials never reach the browser."""
 import json
 import os
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -99,28 +100,75 @@ def summary(row):
             'subscribers':row.get('subscribersGained',0)-row.get('subscribersLost',0),
             'avgSeconds':row.get('averageViewDuration')}
 
+def upload_ids(token, limit=1000):
+    """Discover recent uploads even when Analytics has not processed them yet."""
+    url = 'https://www.googleapis.com/youtube/v3/channels?' + urllib.parse.urlencode({'part':'contentDetails','mine':'true'})
+    channels = request_json(url, token=token).get('items', [])
+    if not channels:
+        raise YouTubeError('Kanalın yüklenen içerik listesi okunamadı. Kanalını yeniden bağla.')
+    playlist = channels[0].get('contentDetails', {}).get('relatedPlaylists', {}).get('uploads')
+    if not playlist:
+        raise YouTubeError('Kanalın yükleme oynatma listesi bulunamadı.')
+    ids, page_token = [], None
+    seen_pages = set()
+    while True:
+        params = {'part':'contentDetails','playlistId':playlist,'maxResults':50}
+        if page_token:
+            params['pageToken'] = page_token
+        page = request_json('https://www.googleapis.com/youtube/v3/playlistItems?' + urllib.parse.urlencode(params), token=token)
+        for item in page.get('items', []):
+            video_id = item.get('contentDetails', {}).get('videoId')
+            if video_id and video_id not in ids:
+                ids.append(video_id)
+        next_token = page.get('nextPageToken')
+        if not next_token:
+            return ids[:limit], len(ids)>limit
+        if len(ids)>=limit:
+            return ids[:limit], True
+        if next_token in seen_pages:
+            raise YouTubeError('Google içerik listesinin sonraki sayfasını okuyamadık. Yeniden dene.')
+        seen_pages.add(next_token)
+        page_token = next_token
+
+def video_duration(value):
+    match = re.fullmatch(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', value or '')
+    if not match:
+        return None
+    hours, minutes, seconds = (int(n or 0) for n in match.groups())
+    total = hours*3600+minutes*60+seconds
+    return f'{total//3600}:{total%3600//60:02d}:{total%60:02d}' if total>=3600 else f'{total//60}:{total%60:02d}'
+
 def fetch_analytics(token, days):
     start, end = date_range(days)
     metrics = 'views,estimatedMinutesWatched,subscribersGained,subscribersLost,averageViewDuration'
     total = query_report(token,start,end,metrics=metrics)
     daily = query_report(token,start,end,metrics='views',dimensions='day',sort='day')
     rows = query_report(token,start,end,metrics=metrics,dimensions='video',sort='-views',maxResults=50)
-    ids = [r['video'] for r in rows]
+    reported = {row['video']:row for row in rows}
+    uploads, truncated = upload_ids(token)
+    # Keep older reported videos too, but do not hide yesterday's uploads just
+    # because they have no Analytics row yet.
+    ids = list(dict.fromkeys(uploads + list(reported)))
     metadata = {}
-    if ids:
-        url='https://www.googleapis.com/youtube/v3/videos?' + urllib.parse.urlencode({'part':'snippet,contentDetails','id':','.join(ids)})
-        metadata = {item['id']:item for item in request_json(url,token=token).get('items',[])}
+    for offset in range(0, len(ids), 50):
+        url='https://www.googleapis.com/youtube/v3/videos?' + urllib.parse.urlencode({'part':'snippet,contentDetails,statistics','id':','.join(ids[offset:offset+50])})
+        metadata.update({item['id']:item for item in request_json(url,token=token).get('items',[])})
     videos=[]
-    for row in rows:
-        item = metadata.get(row['video'], {})
+    for video_id in ids:
+        item = metadata.get(video_id, {})
         snippet=item.get('snippet',{})
         thumbnail=snippet.get('thumbnails',{}).get('medium',{}).get('url')
-        # Only Google's thumbnail host is allowed as an external image source.
         if thumbnail and urllib.parse.urlsplit(thumbnail).hostname not in ('i.ytimg.com','i9.ytimg.com'):
             thumbnail=None
-        value=summary(row)
-        videos.append({'id':row['video'], 'title':snippet.get('title','Video bilgisi mevcut değil'),
+        row=reported.get(video_id)
+        value=summary(row) if row is not None else {'views':None,'hours':None,'subscribers':None,'avgSeconds':None}
+        lifetime=item.get('statistics',{}).get('viewCount')
+        videos.append({'id':video_id, 'title':snippet.get('title','Video bilgisi mevcut değil'),
                        'published':snippet.get('publishedAt','')[:10] or 'Yayın tarihi bilinmiyor',
-                       'image':thumbnail, 'format':None, 'impressions':None,'ctr':None, **value})
+                       'image':thumbnail, 'format':None, 'impressions':None,'ctr':None,
+                       'duration':video_duration(item.get('contentDetails',{}).get('duration')),
+                       'lifetimeViews':int(lifetime) if lifetime is not None else None,
+                       'reportStatus':'available' if row is not None else 'not_reported', **value})
     return {'start':start,'end':end,'summary':summary(total[0] if total else {}),
-            'daily':[{'date':row['day'],'views':row['views']} for row in daily], 'videos':videos}
+            'daily':[{'date':row['day'],'views':row['views']} for row in daily], 'videos':videos,
+            'libraryTruncated':truncated, 'libraryLimit':1000, 'reportVideoLimit':50}
